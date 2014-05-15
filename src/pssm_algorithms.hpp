@@ -90,9 +90,6 @@ matchArray lookaheadFiltrationDNA(const int q, const charArray &s, const scoreMa
 std::vector<matchArray> multipleMatrixLookaheadFiltration(const int q, const charArray &s, const std::vector<intMatrix> &matrices, const doubleArray &bg, const intArray &tol);
 std::vector<matchArray> multipleMatrixLookaheadFiltrationDNA(const int q, const charArray &s, const std::vector<scoreMatrix> &matrices, const doubleArray &bg, const scoreArray &tol);
 
-void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
-    const std::vector<scoreMatrix> &matrices, const doubleArray &bg, const scoreArray &tol);
-
 // Output list element for mm AC automaton
 struct OutputListElementMulti
 {
@@ -101,9 +98,16 @@ struct OutputListElementMulti
     bool full;
 };
 
+void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
+    const std::vector<scoreMatrix> &matrices, 
+    std::vector<std::vector< OutputListElementMulti> > &output, 
+    intArray &window_positions, intArray &m, intMatrix &orders,
+    scoreMatrix &L,
+    const doubleArray &bg, const scoreArray &tol);
 
-std::vector<matchArray> doScan(const int q, const std::vector<scoreMatrix> &matrices, 
-	const charArray &s, std::vector<std::vector< OutputListElementMulti> > &output, 
+std::vector<matchArray> doScan(const charArray &s, 
+	const int q, const std::vector<scoreMatrix> &matrices, 
+	std::vector<std::vector< OutputListElementMulti> > &output, 
 	const intArray &window_positions, const intArray &m, intMatrix &orders, 
 	const scoreMatrix &L,
 	const scoreArray &tol);
