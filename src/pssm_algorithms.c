@@ -1,23 +1,23 @@
-int expectedDifferences(const score_t **mat, const double* bg, double**ret) {
-    int numA = mat.size;
-    int m = mat[0].size;
+int expectedDifferences(const score_t **mat, int n, int m, const double* bg, double**ret) {
     double * ed = NULL;
+    int i,j;
+    score_t max;
     ed = (double *) malloc(m*sizeof(double));
     if (ed == NULL) {
         return -1;
     }
 
-    for (int i = 0; i < m; ++i) {
-        score_t max = SCORE_MIN;
-        for (int j = 0; j < numA; ++j) {
-            if (max < mat[j][i]) {
+    for (i = 0; i < m; ++i) {
+        max = SCORE_MIN;
+        for (j = 0; j < n; ++j) {
+            if (max < mat[j]->[i]) {
                 max = mat[j][i];
             }
         }
 
         ed[i] = max;
 
-        for (int j = 0; j < numA; ++j) {
+        for (j = 0; j < n; ++j) {
             ed[i] -= bg[j] * mat[j][i];
         }
     }
@@ -26,7 +26,7 @@ int expectedDifferences(const score_t **mat, const double* bg, double**ret) {
 }
 
 void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
-    const score_t ***matrices, 
+    const score_t ***matrices, int *matrices_dims,
     OutputListElementMulti **output, 
     int *window_positions, int *m, int** orders,
     score_t **L,
@@ -36,12 +36,13 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     const unsigned int numA = 4; // 2**BITSIFT
 
     // intArray m(matrices.size(), 0);
-    for (int i = 0; i < (int) matrices.size(); ++i) {
+    int i, il;
+    for (i = 0; i < (int) matrices.size(); ++i) {
         m[i] = matrices[i][0].size();
     }
 
     // Calculate entropies for all matrices
-    vector<doubleArray> goodnesses;
+    double *goodnesses;
     goodnesses.reserve(matrices.size());
 
     for (int i = 0; i < (int)matrices.size(); ++i) {

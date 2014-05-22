@@ -32,7 +32,7 @@ typedef struct {
     score_t score;
 } match_data_t;
 
-double *expectedDifferences(const score_t **mat, const double* bg);
+int expectedDifferences(const score_t **mat, int n, int m, const double* bg, double**ret);
 
 // Output list element for mm AC automaton
 struct {
@@ -42,7 +42,7 @@ struct {
 } OutputListElementMulti;
 
 void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
-    const score_t ***matrices, 
+    const score_t ***matrices, int *matrices_dims,
     OutputListElementMulti **output, 
     int *window_positions, int *m, int** orders,
     score_t **L,
