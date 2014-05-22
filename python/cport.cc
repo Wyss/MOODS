@@ -10,6 +10,13 @@
 #include <Python.h>
 #include "pssm_algorithms.hpp"
 
+#if PY_MAJOR_VERSION >= 3
+/* see http://python3porting.com/cextensions.html */
+    #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+#else
+    #define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
+#endif
+
 charArray convertSequence(const char *sequence) {
 	charArray c_seq;
 	int lenght = strlen(sequence);
@@ -256,7 +263,7 @@ static PyObject *_search(PyObject *self, PyObject *args)
     return results;
 }
 
-static PyMethodDef SpamMethods[] = {
+static PyMethodDef _cmodule__methods[] = {
     {"_search",  _search, METH_VARARGS,
      "Search for a pwm match."},
     {"_count_log_odds",  _countLogOdds, METH_VARARGS,
@@ -268,11 +275,28 @@ static PyMethodDef SpamMethods[] = {
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
+PyDoc_STRVAR(_cmodule__doc__,
+              "Simple filtering of DNA sequences\n");
+
 extern "C" {
-PyMODINIT_FUNC
-init_cmodule(void)
-{
-	(void) Py_InitModule("_cmodule", SpamMethods);
+MOD_INIT(_cmodule) {
+	#if PY_MAJOR_VERSION >= 3
+	    static struct PyModuleDef moduledef = {
+	        PyModuleDef_HEAD_INIT,
+	        "_cmodule",           /* m_name */
+	        _cmodule__doc__,      /* m_doc */
+	        -1,                  /* m_size */
+	        _cmodule__methods,	/* m_methods */
+	        NULL,               /* m_reload */
+	        NULL,               /* m_traverse */
+	        NULL,               /* m_clear */
+	        NULL,               /* m_free */
+	    };
+	    PyObject* m = PyModule_Create(&moduledef);
+	    return m;
+	#else
+		(void) Py_InitModule3("_cmodule", _cmodule__methods, _cmodule__doc__);
+	#endif
 }
 
 }

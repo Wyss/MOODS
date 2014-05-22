@@ -3,8 +3,8 @@
 #include <string.h> /* for NULL pointers */
 #include <vector>
 #include "pssm_algorithms.hpp"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include    <numpy/arrayobject.h>
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+// #include    <numpy/arrayobject.h>
 
 #if PY_MAJOR_VERSION >= 3
 /* see http://python3porting.com/cextensions.html */
@@ -18,20 +18,67 @@
 PyDoc_STRVAR(moodsclass__doc__,
               "Do Position Weight Matrix stuff\n");
 
-scoreArray* atoDoubleArray(PyObject *o) {
+charArray convertSequence(const char *sequence) {
+    charArray c_seq;
+    int lenght = strlen(sequence);
+    for(int i = 0; i < lenght; i++) {
+        char toput = 5;
+        switch (sequence[i])
+        {
+            case 'a':
+            case 'A': toput = 0; break;
+            case 'c':
+            case 'C': toput = 1; break;
+            case 'g':
+            case 'G': toput = 2; break;
+            case 't':
+            case 'T': toput = 3; break;
+            case 'n':
+            case 'N': toput = (int) (4 * rand() / (1.0 + RAND_MAX)); break;
+            default:
+                break;
+        }
+        if(toput != 5) {
+            c_seq.push_back(toput);
+        }
+    }
+    return c_seq;
+}
+
+scoreArray atoDoubleArray(PyObject *o) {
+    scoreArray t;
     if(!PyList_Check(o)) {
-        return NULL;
+        return t;
     }
 
     Py_ssize_t length = PyList_Size(o);
-    scoreArray *tp = new scoreArray((int) length);
-    scoreArray &t = *tp;
+    scoreArray *tp = new scoreArray;
+    tp->reserve((int) length);
+    t = *tp;
     PyObject *tmp;
     for(int i=0; i< length; i++) {
         tmp = PyList_GET_ITEM(o, i);
         t.push_back(PyFloat_AsDouble(tmp));
     }
-    return tp;
+    return t;
+}
+
+scoreMatrix atoDoubleMatrix(PyObject *o) {
+    scoreMatrix t;
+    if(!PyList_Check(o)) {
+        return t;
+    }
+    Py_ssize_t length = PyList_Size(o);
+    scoreMatrix *tp = new scoreMatrix;
+    tp->reserve((int) length);
+    t = *tp;
+    
+    PyObject *tmp;
+    for(int i=0; i < length; i++) {
+        tmp = PyList_GET_ITEM(o, i);
+        t.push_back(atoDoubleArray(tmp));
+    }
+    return t;
 }
 
 typedef struct {
@@ -44,6 +91,8 @@ typedef struct {
     intMatrix *orders; 
     scoreMatrix *L;
     scoreArray *thresholds;
+    bool both_strands;
+    int num_matrices;
 } MOODSSearch;
 
 static void
@@ -62,6 +111,7 @@ static PyObject *
 MOODSSearch_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     MOODSSearch *self;
     self = (MOODSSearch *)type->tp_alloc(type, 0);
+    self->matrices = NULL;
     self->matrices = new std::vector<scoreMatrix>();
     self->output = NULL;
     self->window_positions=NULL;
@@ -78,46 +128,32 @@ static int
 MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     PyObject *py_matrices;
     PyObject *py_thresholds;
-    const char *algorithm;
     int q;
     PyObject *py_absolute_threshold;
     PyObject *py_bg;
-    PyObject *py_combine;
     PyObject *py_both_strands;
     bool absolute_threshold;
     double ps = 0.1;
-    bool combine = false;
+    // bool combine = false;
     bool both_strands;
 
     std::vector<scoreMatrix> &matrices = self->matrices;
-
-    scoreArray bg;
 
     if (self == NULL) {
         return -1;
     }
 
-    if (!PyArg_ParseTuple(args, "OOOsiOOO", &py_matrices, &py_thresholds, &py_bg, &algorithm, &q, &py_absolute_threshold, &py_combine, &py_both_strands)) {
+    if (!PyArg_ParseTuple(args, "OOOiOO", &py_matrices, &py_thresholds, &py_bg, &q, &py_absolute_threshold, &py_both_strands)) {
         return -1;
     }
 
     absolute_threshold = (bool) PyObject_IsTrue(py_absolute_threshold);
-    combine = (bool) PyObject_IsTrue(py_combine);
     self->thresholds = atoDoubleArray(py_thresholds);
     scoreArray &thresholds = *(self->thresholds);  // Hopefully this works
     
-    both_strands = (bool) PyObject_IsTrue(py_both_strands);
+    self->both_strands = (bool) PyObject_IsTrue(py_both_strands);
 
-    if(py_bg != Py_None) {
-        bg = *(atoDoubleArray(py_bg));
-    }
-    else {
-        if(!absolute_threshold) {
-            bg = bgFromSequence(c_seq, 4, ps);
-        } else {
-            bg = flatBG(4);
-        }
-    }
+    scoreArray bg = *(atoDoubleArray(py_bg));
 
     if(!PyList_Check(py_matrices)) {
         return NULL;
@@ -127,8 +163,9 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         PyErr_SetString(PyExc_RuntimeError, "Thresholds should be as many as matrices");
         return NULL;
     }
+    self->num_matrices = num_matrices;
 
-    for(int i=0; i< num_matrices; i++) {
+    for(int i=0; i < num_matrices; i++) {
         matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
         if(matrices[i].size() != 4) {
             PyErr_SetString(PyExc_RuntimeError, "Matrix size must be 4");
@@ -148,33 +185,71 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         }
     }
     if(!absolute_threshold) {
-        for(int i=0; i< matrices.size(); i++) {
+        for(int i=0; i < matrices.size(); i++) {
             matrices[i] = counts2LogOdds(matrices[i], bg, ps);
             thresholds[i] = tresholdFromP(matrices[i], bg, thresholds[i]);
         }
     }
 
-    if(matrices.size() == 1) {
-        combine = false;
-    }
+    const int BITSHIFT = 2;
+    const bits_t size = 1 << (BITSHIFT * q); // numA^q
+    self->output = new std::vector<std::vector< OutputListElementMulti> >;
+    self->output->reserve(size);
+    self->window_positions = new intArray;
+    self->window_positions->reserve(matrices.size());
+    self->m = new intArray(matrices.size(), 0);
+    self->orders = new intMatrix;
+    self->orders->reserve(matrices.size());
+    self->L = new scoreMatrix;
+    self->L->reserve(matrices.size());
+    multipleMatrixLookaheadFiltrationDNASetup(q, 
+        self->matrices, self->output, self->window_positions, 
+        self->m, self->orders, self->L,
+        bg, self->thresholds);
 
-    if(strcmp(algorithm, "lf") == 0) {
-        const bits_t size = 1 << (BITSHIFT * q); // numA^q
-        self->output = new std::vector<std::vector< OutputListElementMulti> >(size);
-        self->window_positions = new intArray(matrices.size());
-        self->m = new intArray(matrices.size(), 0);
-        self->orders = new intMatrix(matrices.size());
-        self->L = new scoreMatrix(matrices.size());
-        multipleMatrixLookaheadFiltrationDNASetup(q, 
-            self->matrices, self->output, self->window_positions, 
-            self->m, self->orders, self->L,
-            bg, self->thresholds);
-    }
-
-    self.q = q;
+    self->q = q;
 
     return 0;
 };
+
+static PyObject *
+MOODSSearch_search(MOODSSearch* self, PyObject *args) {
+    const char *sequence;
+    std::vector<matchArray> matches;
+    charArray c_seq;
+    if (!PyArg_ParseTuple(args, "s", &sequence)) {
+        return NULL;
+    }
+    c_seq = convertSequence(sequence);
+    matches = doScan(c_seq, self->q, self->matrices, self->output, 
+        self->window_positions, self->m, 
+        self->orders, self->L, self->thresholds);
+
+    int num_matrices = self->num_matrices;
+    if(self->both_strands) {
+        if(matches.size() != 2 * num_matrices) {
+            PyErr_SetString(PyExc_RuntimeError, "Unknown error");
+            return NULL;
+        }
+        for(int i=0; i< num_matrices; i++) {
+            while(!matches[num_matrices + i].empty()) {
+                matches[num_matrices + i].back().position = -matches[num_matrices + i].back().position;
+                matches[i].push_back(matches[num_matrices + i].back());
+                matches[num_matrices + i].pop_back();
+            }
+        }
+    }
+    PyObject *results = PyList_New(matches.size());
+    for(int i = 0; i < matches.size(); i++) {
+        PyObject *new_match_list = PyList_New(matches[i].size());
+        for(int j=0; j < matches[i].size(); j++) {
+            PyList_SET_ITEM(new_match_list, j, Py_BuildValue("Ld", matches[i][j].position, matches[i][j].score));
+        }
+        PyList_SET_ITEM(results, i, new_match_list);
+    }
+
+    return results;
+}
 
 static PyMemberDef MOODSSearch_members[] = {
     {NULL}  /* Sentinel */
@@ -185,8 +260,8 @@ static PyGetSetDef MOODSSearch_getsetters[] = {
 };
 
 static PyMethodDef MOODSSearch_methods[] = {
-    {"checkstuff", (PyCFunction)MOODSSearch_checkstuff, METH_VARARGS,
-     "cs\n"
+    {"search", (PyCFunction)MOODSSearch_search, METH_VARARGS,
+     "do a Lookahead Filtration Search\n"
     },
     {NULL}  /* Sentinel */
 };
@@ -254,7 +329,7 @@ MOD_INIT(moodsclass) {
             NULL,                   /* m_free */
         };
         PyObject* m = PyModule_Create(&moduledef);
-        import_array();
+        // import_array();
         if (m == NULL) { return NULL; }
 
         Py_INCREF(&MOODSSearchType);
@@ -263,7 +338,7 @@ MOD_INIT(moodsclass) {
     #else
         PyObject* m = Py_InitModule3("moodsclass", moodsclass_methods, moodsclass__doc__);
         if (m == NULL) { return; }
-        import_array();
+        // import_array();
         Py_INCREF(&MOODSSearchType);
         PyModule_AddObject(m, "MOODSSearch", (PyObject *)&MOODSSearchType);
     #endif
