@@ -1,32 +1,41 @@
-int expectedDifferences(const score_t **mat, int n, int m, const double* bg, double**ret) {
-    double * ed = NULL;
+
+#include "pssm_algoritm.h"
+double * expectedDifferences(const score_matrix_t smatrix, const double *bg, int *rc) {
+    int numA =  (int) kv_size(smatrix);
+    int m = (int) kv_size( kv_A(smatrix, 0) );
     int i,j;
     score_t max;
+    score_t temp;
+    double * ed = NULL;
     ed = (double *) malloc(m*sizeof(double));
     if (ed == NULL) {
-        return -1;
+        goto ed_fail;
     }
-
+    
     for (i = 0; i < m; ++i) {
         max = SCORE_MIN;
-        for (j = 0; j < n; ++j) {
-            if (max < mat[j]->[i]) {
-                max = mat[j][i];
+        for (j = 0; j < numA; ++j) {
+            temp = kv_A(kv_A(smatrix, j), i);
+            if (max <  temp) {
+                max = temp;
             }
         }
 
         ed[i] = max;
 
-        for (j = 0; j < n; ++j) {
-            ed[i] -= bg[j] * mat[j][i];
+        for (j = 0; j < numA; ++j) {
+            ed[i] -= bg[j] * kv_A(kv_A(smatrix, j), i);
         }
     }
-    *ret = ed;
-    return 0;
+    *rc = 0;
+    return ed;
+    ed_fail:
+        *rc = 1;
+        return ed;
 }
 
 void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
-    const score_t ***matrices, int *matrices_dims,
+    const score_matrix_vec_t matrices,
     OutputListElementMulti **output, 
     int *window_positions, int *m, int** orders,
     score_t **L,
@@ -36,27 +45,30 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     const unsigned int numA = 4; // 2**BITSIFT
 
     // intArray m(matrices.size(), 0);
-    int i, il;
-    for (i = 0; i < (int) matrices.size(); ++i) {
-        m[i] = matrices[i][0].size();
+    int i, k, rc;
+    const int msize = (int) kv_size(matrices);
+    for (i = 0; i < msize; ++i) {
+        m[i] = (int) kv_size(kv_A(kv_A(matrices, i), 0));
     }
 
     // Calculate entropies for all matrices
-    double *goodnesses;
-    goodnesses.reserve(matrices.size());
-
-    for (int i = 0; i < (int)matrices.size(); ++i) {
-        goodnesses.push_back(expectedDifferences(matrices[i], bg));
+    double **goodnesses;
+    goodnesses = (double **) malloc(msize*sizeof(double *));
+    for (i = 0; i < msize; ++i) {
+        goodnesses[i] = expectedDifferences(kv_A(matrices, i), bg, &rc);
+        if (rc < 0) {
+            goto mlf_fail;
+        }
     }
 
     // intArray window_positions;
     // window_positions.reserve(matrices.size());
-    for (int k = 0; k < (int)matrices.size(); ++k) {
-        if (q >= m[k]) {
-            window_positions.push_back(0);
+    for (k = 0; k < msize; ++k) {
+        if (q >= kv_A(m, k)) {
+            window_positions[0] = 0;
         } else {
             double current_goodness = 0;
-            for (int i = 0; i < q; ++i) {
+            for (i = 0; i < q; ++i) {
                 current_goodness += goodnesses[k][i];
             }
 
@@ -71,16 +83,19 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
                     window_pos = i+1;
                 }
             }
-            window_positions.push_back(window_pos);
+            window_positions[k] = window_pos;
         }
     }
 
     // Calculate lookahead scores for all matrices
-    scoreMatrix T;
-    T.reserve(matrices.size());
-
-    for (int k = 0; k < (int)matrices.size(); ++k) {
-        scoreArray C(m[k],0);
+    score_t **T = NULL;
+    T = (score_t **) malloc(msize*sizeof(score_t*));
+    score_t *C = NULL;
+    for (int k = 0; k < msize; ++k) {
+        C = (score_t *) calloc(m[k], sizeof(score_t));
+        if (C == NULL) {
+            goto mlf_fail;
+        }
         for (int j = m[k] - 1; j > 0; --j) {
             score_t max = SCORE_MIN;
             for (unsigned int i = 0; i < numA; ++i) {
@@ -89,23 +104,25 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
             }
             C[j - 1] = C[j] + max;
         }
-        T.push_back(C);
+        T[k] = C;
     }
 
     // Pre-window scores
-    scoreArray P;
-    P.reserve(matrices.size());
-    for (int k = 0; k < (int)matrices.size(); ++k) {
+    score_t *P = NULL;
+    P = (score_t *) malloc(msize*sizeof(score_t));
+
+    for (int k = 0; k < msize; ++k) {
         score_t B = 0;
         for (int j = 0; j < window_positions[k]; ++j) {
             score_t max = SCORE_MIN;
             for (unsigned int i = 0; i < numA; ++i) {
-                if (max < matrices[k][i][j])
+                if (max < matrices[k][i][j]) {
                     max = matrices[k][i][j];
+                }
             }
             B += max;
         }
-        P.push_back(B);
+        P[k] = B;
     }
 
     // Arrange matrix indeces not in window by entropy, for use in scanning
@@ -114,15 +131,20 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     // scoreMatrix L;
     // L.reserve(matrices.size());
 
-    for (unsigned short k = 0; k < (int) matrices.size(); ++k) {
+    for (unsigned short k = 0; k < msize; ++k) {
         if (q >= m[k]) {
-            intArray temp1;
-            orders.push_back(temp1);
-            scoreArray temp2;
-            L.push_back(temp2);
-        }
-        else {
-            intArray order(m[k]-q, 0);
+            // orders.push_back(temp1);
+            orders[k] = NULL;
+            // L.push_back(temp2);
+            L[k] = NULL;
+        } else {
+            // intArray order(m[k]-q, 0);
+            int *order = NULL;
+            order = (int *) calloc(m[k]-q, sizeof(int));
+            if (order == NULL) {
+                goto mlf_fail;
+            }
+
             for (int i = 0; i < window_positions[k]; ++i) {
                 order[i] = i;
             }
@@ -135,9 +157,16 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
 
             sort(order.begin(), order.end(), comp);
 
-            orders.push_back(order);
+            // orders.push_back(order);
+            orders[k] = order;
 
-            scoreArray K(m[k]-q, 0);
+
+            score_t * K = NULL;
+            K = (score_t *) calloc(m[k] - q, sizeof(score_t));
+            if (K == NULL) {
+                goto mlf_fail;
+            }
+
             for (int j = m[k]-q-1; j > 0; --j) {
                 score_t max = INT_MIN;
                 for (unsigned int i = 0; i < numA; ++i) {
@@ -147,7 +176,8 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
                 }
                 K[j - 1] = K[j] + max;
             }
-            L.push_back(K);
+            // L.push_back(K);
+            L[k] = K;
         }
     }
 
@@ -155,59 +185,60 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     // const bits_t BITAND = size - 1;
     // vector<vector< OutputListElementMulti> > output(size);
 
-    {
-        bit_t * sA = (bit_t *) calloc(q, sizeof(bit_t));
+    bit_t * sA = (bit_t *) calloc(q, sizeof(bit_t));
+    OutputListElementMulti *temp_ptr;
+    while (true) {
+        bits_t code = 0;
+        for (int j = 0; j < q; ++j) {
+            code = (code << BITSHIFT) | sA[j];
+        }
 
-        while (true) {
-            bits_t code = 0;
-            for (int j = 0; j < q; ++j) {
-                code = (code << BITSHIFT) | sA[j];
-            }
-
-            for (unsigned int k = 0; k < matrices.size(); ++k ) {
-                if (m[k] <= q) {
-                    score_t score = 0;
-                    for (int i = 0; i < m[k]; ++i) {
-                        score += matrices[k][sA[i]][i];
-                    }
-                    if (score >= tol[k]) {
-                        OutputListElementMulti temp;
-                        temp.full = true;
-                        temp.matrix = k;
-                        temp.score = score;
-                        output[code].push_back(temp);
-                    }
-                } else {
-                    score_t score = 0;
-                    for (int i = 0; i < q; ++i) {
-                        score += matrices[k][sA[i]][i + window_positions[k]];
-                    }
-                    if (score + P[k] + T[k][q + window_positions[k]-1] >= thresholds[k]) {
-                        OutputListElementMulti temp;
-                        temp.full = false;
-                        temp.matrix = k;
-                        temp.score = score;
-                        output[code].push_back(temp);
-                    }
+        for (unsigned int k = 0; k < msize; ++k ) {
+            if (m[k] <= q) {
+                score_t score = 0;
+                for (int i = 0; i < m[k]; ++i) {
+                    score += matrices[k][sA[i]][i];
                 }
-            }
-
-            int pos = 0;
-            while (pos < q) {
-                if (sA[pos] < numA - 1) {
-                    ++sA[pos];
-                    break;
-                } else {
-                    sA[pos] = 0;
-                    ++pos;
+                if (score >= tol[k]) {
+                    OutputListElementMulti temp;
+                    temp.full = true;
+                    temp.matrix = k;
+                    temp.score = score;
+                    kv_push_plus(OutputListElementMulti, output[code], temp, temp_ptr, mlf_fail);
                 }
-            }
-
-            if (pos == q) {
-                break;
+            } else {
+                score_t score = 0;
+                for (int i = 0; i < q; ++i) {
+                    score += matrices[k][sA[i]][i + window_positions[k]];
+                }
+                if (score + P[k] + T[k][q + window_positions[k]-1] >= thresholds[k]) {
+                    OutputListElementMulti temp;
+                    temp.full = false;
+                    temp.matrix = k;
+                    temp.score = score;
+                    kv_push_plus(OutputListElementMulti, output[code], temp, temp_ptr, mlf_fail);
+                }
             }
         }
+
+        int pos = 0;
+        while (pos < q) {
+            if (sA[pos] < numA - 1) {
+                ++sA[pos];
+                break;
+            } else {
+                sA[pos] = 0;
+                ++pos;
+            }
+        }
+
+        if (pos == q) {
+            break;
+        }
     }
+
+    mlf_fail:
+
 }
 
 vector<matchArray> doScan( const charArray &s, 
