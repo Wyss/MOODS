@@ -76,8 +76,10 @@ int expectedDifferences(const score_matrix_t *mat, const double *bg, double **re
 struct {
     score_t score;
     int matrix;
-    bool full;
-} OutputListElementMulti;
+    int full; // boolean
+} OutputListElementMulti_t;
+
+typedef kvec_t(OutputListElementMulti_t) OutputListElementMulti_vec_t;
 
 void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
     const score_matrix_vec_t *matrices,
@@ -86,10 +88,21 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     score_matrix_t *L,
     const double *bg, const score_vec_t *thresholds);
 
+typedef struct {
+    int q; 
+    score_matrix_vec_t *matrices;
+    OutputListElementMulti_vec_t *output; 
+    int_vec_t *window_positions;
+    int_vec_t *m;
+    int_matrix_t *orders; 
+    score_matrix_t *L;
+    score_vec_t *thresholds;
+} moods_mlf_t;
+
 match_data_t * doScan(const unsigned char *s, 
-	const int q, const score_matrix_vec_t *matrices, 
+    const int q, const score_matrix_vec_t *matrices, 
     OutputListElementMulti **output, 
-	const int_vec_t *window_positions, const int_vec_t *m, int_matrix_t *orders, 
-	const score_matrix_t *L,
-	const score_vec_t *thresholds);
+    const int_vec_t *window_positions, const int_vec_t *m, int_matrix_t *orders, 
+    const score_matrix_t *L,
+    const score_vec_t *thresholds);
 #endif
