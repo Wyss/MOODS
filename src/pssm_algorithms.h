@@ -34,7 +34,7 @@ typedef struct {
 } match_data_t;
 
 // adds a chance for error handling
-#define kv_resize_plus(type, v, s, temp, label)  \
+#define kv_resize_safe(type, v, s, temp, label)  \
 (v).m = (s); \
 temp = (type *)realloc((v).a, sizeof(type) * (v).m); \
 if (temp != NULL) { \
@@ -45,7 +45,7 @@ if (temp != NULL) { \
 }
 
 // adds a chance for error handling
-#define kv_push_plus(type, v, x, temp, label) do {                  \
+#define kv_push_safe(type, v, x, temp, label) do {                  \
         if ((v).n == (v).m) {                                       \
             (v).m = (v).m ? (v).m << 1 : 2;                         \
             temp = (type*)realloc((v).a, sizeof(type) * (v).m);     \
