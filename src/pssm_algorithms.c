@@ -42,7 +42,7 @@ double * expectedDifferences(const score_matrix_t smatrix, const double *bg, int
 
 void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
     const score_matrix_vec_t matrices,
-    OutputListElementMulti **output, 
+    OutputListElementMulti_t *output, 
     int *window_positions, int *m, int** orders,
     score_t **L,
     const double *bg, const score_t *thresholds) {
@@ -275,34 +275,44 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
 
 }
 
-match_data_t * doScan(const unsigned char *s, 
-    const int q, const score_matrix_vec_t *matrices, 
-    OutputListElementMulti **output, 
-    const int_vec_t *window_positions, const int_vec_t *m, int_matrix_t *orders, 
-    const score_matrix_t *L,
-    const score_vec_t *thresholds)
+int doScan(const unsigned char *s, 
+    moods_mlf_t *in, 
+    match_data_t ** matches)
 {
     const int BITSHIFT = 2;
     const bits_t size = 1 << (BITSHIFT * q); // numA^q
     const bits_t BITAND = size - 1;
     
     const position_t n = s.size();
+
+    // unpack datastructure
+    const int q = in->q;
+    const score_matrix_vec_t *matrices = in->matrices;
+    OutputListElementMulti_t *output = in->output;
+    const int_vec_t *window_positions = in->window_positions;
+    const int_vec_t *m = in->m;
+    int_matrix_t *orders = in->orders;
+    const score_matrix_t *L = in->L;
+    const score_vec_t *thresholds = in->thresholds;
+
+    const int msize = (int) kv_size(matrices);
     // Scanning
 
-    vector<matchArray> ret;
-    for (unsigned int i = 0; i < matrices.size(); ++i) {
-        matchArray temp;
-        ret.push_back(temp);
+    // allocate an array of match_data_t vectors
+    match_data_vec_t *ret = NULL;
+    ret = calloc( msize, sizeof(match_data_vec_t));
+    if (ret == NULL) {
+        goto scan_fail;
     }
 
-    matchData hit;
+    match_data_t hit;
 
     score_t score;
     position_t k;
     position_t limit;
     position_t ii;
     score_t tolerance;
-    intArray::iterator z;
+    int *z;
 
     bits_t code = 0;
     for (position_t ii = 0; ii < q - 1; ++ii) {
@@ -312,22 +322,26 @@ match_data_t * doScan(const unsigned char *s,
     for (position_t i = 0; i < n - q + 1; ++i) {
         code = ((code << BITSHIFT) + s[i + q - 1]) & BITAND;
 
-        if (!output[code].empty()) {
-            for (vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
+        int lim;
+        if ((lim=kv_size(output[code]) != 0) {
+            OutputListElementMulti_t *y = output[code].a;
+            OutputListElementMulti_t *yl = y + lim;
+            for (; y < yl; ++y) {
                 if (y->full) { // A Hit for a matrix of length <= q
                     hit.position = i;
                     hit.score = y->score;
-                    ret[y->matrix].push_back(hit);
+                    kv_push(match_data_t, ret[y->matrix], hit);
                     continue;
                 }
                 // A possible hit for a longer matrix. Don't check if matrix can't be positioned entirely on the sequence here
-                if (i - window_positions[y->matrix] >= 0 && i + m[y->matrix] - window_positions[y->matrix] <= n) { 
+                if (    ((i - window_positions[y->matrix]) >= 0) && \
+                        ( (i + m[y->matrix] - window_positions[y->matrix]) <= n) ) { 
                     score = y->score;
                     k = y->matrix;
                     limit = m[k] - q;
                     ii = i - window_positions[k];
                     tolerance = thresholds[k];
-                    z = orders[k].begin();
+                    z = orders[k];
                     for (int j = 0; j < limit  ;++j) {
                         score += matrices[k][s[ii+(*z)]][*z];
                         if (score + L[k][j] < tolerance) {
@@ -338,7 +352,7 @@ match_data_t * doScan(const unsigned char *s,
                     if (score >= tolerance) {
                         hit.position = i - window_positions[k];
                         hit.score = score;
-                        ret[k].push_back(hit);
+                        kv_push(match_data_t, ret[k], hit);
                     }
                 }
             }
@@ -348,17 +362,30 @@ match_data_t * doScan(const unsigned char *s,
     for (position_t i = n - q + 1; i < n; ++i) { // possible hits for matrices shorter than q near the end of sequence
         code = (code << BITSHIFT) & BITAND; // dummy character to the end of code
 
-        if (!output[code].empty()) {
+        int lim;
+        if ((lim=kv_size(output[code]) != 0) {
+            OutputListElementMulti_t *y = output[code].a;
+            OutputListElementMulti_t *yl = y + lim;
+            for (; y < yl; ++y) {
 
-            for (vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
                 if (y->full && m[y->matrix] < n - i + 1) { // only sufficiently short hits are considered
                     hit.position = i;
                     hit.score = y->score;
-                    ret[y->matrix].push_back(hit);
+                    kv_push(match_data_t, ret[y->matrix], hit);
                 }
             }
         }
     }
 
-    return ret;
+    *matches = ret;
+    return 0;
+    scan_fail:
+        // do something
+    {
+        int i;
+        for (i=0; i < msize; i++) {
+            kv_destroy(ret[i])
+        }
+        free(ret);
+    }
 }

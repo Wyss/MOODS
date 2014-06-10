@@ -1,8 +1,7 @@
 #include <Python.h>
 #include "structmember.h"
-#include <string.h> /* for NULL pointers */
-#include <vector>
-#include "pssm_algorithms.hpp"
+#include "string.h"             /* for NULL pointers */
+#include "pssm_algorithms.h"
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #include    <numpy/arrayobject.h>
 
@@ -19,7 +18,7 @@ PyDoc_STRVAR(moodsclass__doc__,
               "Do Position Weight Matrix stuff\n");
 
 charArray convertSequence(const char *sequence) {
-    charArray c_seq;
+    char_vec_t c_seq;
     int lenght = strlen(sequence);
     for(int i = 0; i < lenght; i++) {
         char toput = 5;
@@ -39,58 +38,62 @@ charArray convertSequence(const char *sequence) {
                 break;
         }
         if(toput != 5) {
-            c_seq.push_back(toput);
+            kv_push(uint8_t, c_seq, toput); 
         }
     }
     return c_seq;
 }
 
-scoreArray atoDoubleArray(PyObject *o) {
-    scoreArray t;
+int atoDoubleArray(PyObject *o, score_vec_t *out) {
     if(!PyList_Check(o)) {
-        return t;
+        return -1;
     }
 
     Py_ssize_t length = PyList_Size(o);
-    scoreArray *tp = new scoreArray;
-    tp->reserve((int) length);
-    t = *tp;
+    score_vec_t ret;
+    kv_init(ret);
+    kv_resize(score_t, ret, length);
     PyObject *tmp;
-    for(int i=0; i< length; i++) {
-        tmp = PyList_GET_ITEM(o, i);
-        t.push_back(PyFloat_AsDouble(tmp));
+    int i;
+    for(i=0; i < length;) {
+        tmp = PyList_GET_ITEM(o, i++);
+        kv_push(ret, PyFloat_AsDouble(tmp));
     }
-    return t;
+    *out = ret;
+    return 0;
 }
 
-scoreMatrix atoDoubleMatrix(PyObject *o) {
-    scoreMatrix t;
+int atoDoubleMatrix(PyObject *o, score_matrix_t *out) {
     if(!PyList_Check(o)) {
-        return t;
+        return -1;
     }
     Py_ssize_t length = PyList_Size(o);
-    scoreMatrix *tp = new scoreMatrix;
-    tp->reserve((int) length);
-    t = *tp;
+    score_matrix_vec_t ret;
+    kv_init(ret);
+    kv_resize(score_vec_t, ret, length);
     
-    PyObject *tmp;
-    for(int i=0; i < length; i++) {
-        tmp = PyList_GET_ITEM(o, i);
-        t.push_back(atoDoubleArray(tmp));
+    PyObject *tmp1;
+    score_vec_t tmp2;
+    for(int i=0; i < length;) {
+        tmp1 = PyList_GET_ITEM(o, i++);
+        atoDoubleArray(tmp1, tmp2);
+        kv_push(ret, tmp2);
     }
-    return t;
+    *out = ret;
+    return 0;
 }
 
 typedef struct {
     PyObject_HEAD
-    int q; 
-    std::vector<scoreMatrix> *matrices;
-    std::vector<std::vector< OutputListElementMulti> > *output; 
-    intArray *window_positions;
-    intArray *m; 
-    intMatrix *orders; 
-    scoreMatrix *L;
-    scoreArray *thresholds;
+    moods_mlf_t mlf;
+    // int q; 
+    // std::vector<scoreMatrix> *matrices;
+    // std::vector<std::vector< OutputListElementMulti> > *output; 
+    // intArray *window_positions;
+    // intArray *m; 
+    // intMatrix *orders; 
+    // scoreMatrix *L;
+    // scoreArray *thresholds;
     bool both_strands;
     int num_matrices;
 } MOODSSearch;
@@ -104,6 +107,7 @@ MOODSSearch_dealloc(MOODSSearch* self) {
     delete self->orders;
     delete self->L;
     delete self->thresholds;
+    free(self->mlf);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -111,14 +115,8 @@ static PyObject *
 MOODSSearch_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     MOODSSearch *self;
     self = (MOODSSearch *)type->tp_alloc(type, 0);
-    self->matrices = NULL;
-    self->matrices = new std::vector<scoreMatrix>();
-    self->output = NULL;
-    self->window_positions=NULL;
-    self->m = NULL;
-    self->orders = NULL;
-    self->L = NULL;
-    self->thresholds = NULL;
+    self->mlf = NULL;
+    self->mlf = (moods_mlf_t *) calloc(1, sizeof(moods_mlf_t));
     /* allocate other fields later.
     */
     return (PyObject *)self;
@@ -137,7 +135,9 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     // bool combine = false;
     bool both_strands;
 
-    std::vector<scoreMatrix> &matrices = self->matrices;
+    moods_mlf_t *mlf = self->mlf;
+
+    score_matrix_vec_t *matrices = self->matrices;
 
     if (self == NULL) {
         return -1;
@@ -148,7 +148,7 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     }
 
     absolute_threshold = (bool) PyObject_IsTrue(py_absolute_threshold);
-    self->thresholds = atoDoubleArray(py_thresholds);
+    mlf->thresholds = atoDoubleArray(py_thresholds);
     scoreArray &thresholds = *(self->thresholds);  // Hopefully this works
     
     self->both_strands = (bool) PyObject_IsTrue(py_both_strands);

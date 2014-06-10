@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include "kvec.h"
+#include <inttypes.h>
 
 // for data about position in a sequence
 typedef long position_t;
@@ -69,7 +70,9 @@ typedef kvec_t(score_t) score_vec_t;
 typedef kvec_t(score_vec_t) score_matrix_t;
 typedef kvec_t(score_matrix_t) score_matrix_vec_t;
 typedef kvec_t(double) double_vec_t;
-
+typedef kvec_t(match_data_t) match_data_vec_t;
+typedef kvec_t(uint8_t) char_vec_t;
+    
 int expectedDifferences(const score_matrix_t *mat, const double *bg, double **ret);
 
 // Output list element for mm AC automaton
@@ -99,10 +102,7 @@ typedef struct {
     score_vec_t *thresholds;
 } moods_mlf_t;
 
-match_data_t * doScan(const unsigned char *s, 
-    const int q, const score_matrix_vec_t *matrices, 
-    OutputListElementMulti **output, 
-    const int_vec_t *window_positions, const int_vec_t *m, int_matrix_t *orders, 
-    const score_matrix_t *L,
-    const score_vec_t *thresholds);
+int doScan(const unsigned char *s, 
+    moods_mlf_t *in, 
+    match_data_t ** out);
 #endif
