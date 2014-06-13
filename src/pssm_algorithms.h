@@ -97,7 +97,7 @@ typedef struct {
     OutputListElementMulti_vec_t *output; 
     int_vec_t *window_positions;
     int_vec_t *m;
-    int_matrix_t *orders; 
+    int_vec_t *orders; 
     score_matrix_t *L;
     score_vec_t *thresholds;
 } moods_mlf_t;

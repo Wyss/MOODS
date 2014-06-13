@@ -178,7 +178,8 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
 
     // Arrange matrix indeces not in window by entropy, for use in scanning
     int_vec_t *orders = NULL;
-    orders = (int_vec_t *) malloc(msize*sizeof(int_vec_t));
+    int_vec_t *order;
+    orders = (int_vec_t *) calloc(msize, sizeof(int_vec_t));
     if (orders == NULL) {
         goto mlf_fail;
     }
@@ -187,33 +188,28 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     if (L == NULL) {
         goto mlf_fail;
     }
-    int *order;
     for (k = 0; k < msize; ++k) {
         if (q >= m[k]) {
             orders[k] = NULL;
             L[k] = NULL;
         } else {
             // intArray order(m[k]-q, 0);
-            *order = NULL;
-            order = (int *) calloc(m[k]-q, sizeof(int));
-            if (order == NULL) {
-                goto mlf_fail;
-            }
-
+            // intorder = (int *) calloc(m[k]-q, sizeof(int));
+            kv_resize(int, order[k], m[k]-q);
+            order = &orders[k];
+ 
             for (i = 0, il = window_positions[k]; i < il; ++i) {
-                order[i] = i;
+                order->a[i] = i;
             }
             for (i = window_positions[k]+q, il=m[k]; i < il; ++i) {
-                order[i - q] = i;
+                order->a[i - q] = i;
             }
 
             // compareRows comp;
             // comp.goodness = &(goodnesses[k]);
 
             // sort(order.begin(), order.end(), comp);
-            ks_mergesort_double(m[k]-q, order.a, 0);
-
-            orders[k] = order;
+            ks_mergesort_double(m[k]-q, order->a, 0);
 
             score_t * K = NULL;
             K = (score_t *) calloc(m[k] - q, sizeof(score_t));
@@ -243,7 +239,7 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     if (output == NULL) {
         goto mlf_fail;
     }
-    bit_t * sA = (bit_t *) calloc(q, sizeof(bit_t));
+    bit_t *sA = (bit_t *) calloc(q, sizeof(bit_t));
     if (sA == NULL) {
         goto mlf_fail;
     }
