@@ -85,7 +85,7 @@ int atoDoubleMatrix(PyObject *o, score_matrix_t *out) {
 
 typedef struct {
     PyObject_HEAD
-    moods_mlf_t mlf;
+    moods_mlf_t *mlf;
     // int q; 
     // std::vector<scoreMatrix> *matrices;
     // std::vector<std::vector< OutputListElementMulti> > *output; 

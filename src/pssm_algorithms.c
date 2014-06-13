@@ -3,8 +3,37 @@
 #include "ksort.h"
 
 #define cmp_gt_double(a, b) ((a) > (b))
-KSORT_INIT(double, double, cmp_gt_double)
+KSORT_INIT(double, double, cmp_gt_double);
 
+int mlf_free(moods_mlf_t mlf) {
+    const int msize = (int) kv_size(matrices);
+    int i;
+    for (i=0; i < msize; i++) {
+        kv_destroy(mlf->matrices.a[i]);
+        kv_destroy(mlf->output[i]);
+        // somthing for orders and L
+        
+    }
+    kv_destroy(mlf->window_positions);
+    kv_destroy(mlf->m);
+    kv_destroy(mlf->thresholds);
+
+    kv_destroy(mlf->matrices);
+    kv_destroy(mlf->m);
+    kv_destroy(mlf->thresholds);
+    free(mlf);
+}
+
+typedef struct {
+    int q; 
+    score_matrix_vec_t *matrices;
+    OutputListElementMulti_vec_t *output; 
+    int_vec_t *window_positions;
+    int_vec_t *m;
+    int_matrix_t *orders; 
+    score_matrix_t *L;
+    score_vec_t *thresholds;
+} moods_mlf_t;
 
 double * expectedDifferences(const score_matrix_t smatrix, const double *bg, int *rc) {
     int numA =  (int) kv_size(smatrix);
@@ -148,8 +177,8 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
     }
 
     // Arrange matrix indeces not in window by entropy, for use in scanning
-    int** orders = NULL;
-    orders = (int **) malloc(msize*sizeof(int *));
+    int_vec_t *orders = NULL;
+    orders = (int_vec_t *) malloc(msize*sizeof(int_vec_t));
     if (orders == NULL) {
         goto mlf_fail;
     }
@@ -182,7 +211,7 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
             // comp.goodness = &(goodnesses[k]);
 
             // sort(order.begin(), order.end(), comp);
-            ks_mergesort_double(m[k]-q, order, 0);
+            ks_mergesort_double(m[k]-q, order.a, 0);
 
             orders[k] = order;
 

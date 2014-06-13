@@ -65,7 +65,7 @@ if (temp != NULL) { \
 typedef kvec_t(int) int_vec_t;
 kv_resize_init(double_vec_t, double);
 
-typedef kvec_t(int_vec_t) int_matrix_t;
+// typedef kvec_t(int_vec_t) int_matrix_t;
 typedef kvec_t(score_t) score_vec_t;
 typedef kvec_t(score_vec_t) score_matrix_t;
 typedef kvec_t(score_matrix_t) score_matrix_vec_t;
@@ -105,4 +105,7 @@ typedef struct {
 int doScan(const unsigned char *s, 
     moods_mlf_t *in, 
     match_data_t ** out);
+
+int mlf_free(moods_mlf_t mlf);
+
 #endif
