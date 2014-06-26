@@ -23,20 +23,14 @@ struct MOODS_MLF {
     scoreArray thresholds;
     scoreArray bg;
 
-    MOODS_MLF(void) {
-        // q = 0;
-        // matrices = new std::vector<scoreMatrix>();
-        // output = new std::vector<std::vector< OutputListElementMulti> >();
-        // window_positions = new intArray();
-        // m = new intArray();
-        // orders = new intMatrix();
-        // L = new scoreMatrix();
-        // thresholds = new scoreArray();
-        // bg = new scoreArray();
-    } 
+    // matrices could be required by the constructor, or I can assign it 
+    // and look it up later.
+    MOODS_MLF() {
+    }
 
+    // must assign member matrices before calling the below methods
     int multipleMatrixLookaheadFiltrationDNASetup();
-    match_data_t doScan(MOODS_MLF &in, int *rc);
+    vector<matchArray> doScan(MOODS_MLF &in, int *rc);
 };
 
 typedef struct MOODS_MLF MOODS_MLF;

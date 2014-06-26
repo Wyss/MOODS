@@ -1,16 +1,10 @@
 
-void  multipleMatrixLookaheadFiltrationDNASetup(const int q,  
-    const vector<scoreMatrix> &matrices, 
-    vector<vector< OutputListElementMulti> > &output, 
-    intArray &window_positions, intArray &m, intMatrix &orders,
-    scoreMatrix &L,
-    const doubleArray &bg, const scoreArray &tol)
-{
+int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup() {
 
     const int BITSHIFT = 2;
     const unsigned int numA = 4; // 2**BITSIFT
 
-    // intArray m(matrices.size(), 0);
+    m.resize(matrices.size(), 0);
     for (int i = 0; i < (int) matrices.size(); ++i) {
         m[i] = matrices[i][0].size();
     }
@@ -23,8 +17,7 @@ void  multipleMatrixLookaheadFiltrationDNASetup(const int q,
         goodnesses.push_back(expectedDifferences(matrices[i], bg));
     }
 
-    // intArray window_positions;
-    // window_positions.reserve(matrices.size());
+    window_positions.reserve(matrices.size());
     for (int k = 0; k < (int)matrices.size(); ++k) {
         if (q >= m[k]) {
             window_positions.push_back(0);
@@ -83,10 +76,8 @@ void  multipleMatrixLookaheadFiltrationDNASetup(const int q,
     }
 
     // Arrange matrix indeces not in window by entropy, for use in scanning
-    // intMatrix orders;
-    // orders.reserve(matrices.size());
-    // scoreMatrix L;
-    // L.reserve(matrices.size());
+    orders.reserve(matrices.size());
+    L.reserve(matrices.size());
 
     for (unsigned short k = 0; k < (int) matrices.size(); ++k) {
         if (q >= m[k]) {
@@ -185,13 +176,7 @@ void  multipleMatrixLookaheadFiltrationDNASetup(const int q,
     // return doScan(q, matrices, output, window_positions, m, orders, L, tol);
 }
 
-vector<matchArray> doScan( const charArray &s, 
-    const int q, const vector<scoreMatrix> &matrices,
-    vector<vector< OutputListElementMulti> > &output, 
-    const intArray &window_positions, const intArray &m, intMatrix &orders,
-    const scoreMatrix &L,
-    const scoreArray &tol)
-{
+vector<matchArray> MOODS_MLF::doScan(const charArray &s) {
     const int BITSHIFT = 2;
     const bits_t size = 1 << (BITSHIFT * q); // numA^q
     const bits_t BITAND = size - 1;
@@ -271,3 +256,4 @@ vector<matchArray> doScan( const charArray &s,
     }
 
     return ret;
+}
