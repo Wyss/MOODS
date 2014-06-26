@@ -14,7 +14,7 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C API functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-PyDoc_STRVAR(moodsclass__doc__,
+PyDoc_STRVAR(moody__doc__,
               "Do Position Weight Matrix stuff\n");
 
 charArray convertSequence(const char *sequence) {
@@ -94,7 +94,7 @@ typedef struct {
     // intMatrix *orders; 
     // scoreMatrix *L;
     // scoreArray *thresholds;
-    bool both_strands;
+    int both_strands;
     int num_matrices;
 } MOODSSearch;
 
@@ -130,10 +130,9 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     PyObject *py_absolute_threshold;
     PyObject *py_bg;
     PyObject *py_both_strands;
-    bool absolute_threshold;
+    int absolute_threshold;
     double ps = 0.1;
-    // bool combine = false;
-    bool both_strands;
+    int both_strands;
 
     moods_mlf_t *mlf = self->mlf;
 
@@ -147,21 +146,21 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
-    absolute_threshold = (bool) PyObject_IsTrue(py_absolute_threshold);
+    absolute_threshold = PyObject_IsTrue(py_absolute_threshold);
     mlf->thresholds = atoDoubleArray(py_thresholds);
     scoreArray &thresholds = *(self->thresholds);  // Hopefully this works
     
-    self->both_strands = (bool) PyObject_IsTrue(py_both_strands);
+    self->both_strands = PyObject_IsTrue(py_both_strands);
 
     scoreArray bg = *(atoDoubleArray(py_bg));
 
     if(!PyList_Check(py_matrices)) {
-        return NULL;
+        return -1;
     }
     int num_matrices = (int) PyList_Size(py_matrices);
     if(num_matrices != thresholds.size()) {
         PyErr_SetString(PyExc_RuntimeError, "Thresholds should be as many as matrices");
-        return NULL;
+        return -1;
     }
     self->num_matrices = num_matrices;
 
@@ -169,13 +168,13 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
         if(matrices[i].size() != 4) {
             PyErr_SetString(PyExc_RuntimeError, "Matrix size must be 4");
-            return NULL;
+            return -1;
         }
     }
 
     //Check if parameter parsing has raised an exception
     if(PyErr_Occurred()) {
-        return NULL;
+        return -1;
     }
 
     if(both_strands) {
@@ -202,10 +201,12 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     self->orders->reserve(matrices.size());
     self->L = new scoreMatrix;
     self->L->reserve(matrices.size());
-    multipleMatrixLookaheadFiltrationDNASetup(q, 
+    if (multipleMatrixLookaheadFiltrationDNASetup(q, 
         self->matrices, self->output, self->window_positions, 
         self->m, self->orders, self->L,
-        bg, self->thresholds);
+        bg, self->thresholds) < 0) {
+        return -1;
+    };
 
     self->q = q;
 
@@ -268,7 +269,7 @@ static PyMethodDef MOODSSearch_methods[] = {
 
 static PyTypeObject MOODSSearchType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "moodsclass.MOODSSearch",        /*tp_name*/
+    "moody.MOODSSearch",        /*tp_name*/
     sizeof(MOODSSearch),            /*tp_basicsize*/
     0,                              /*tp_itemsize*/
     (destructor)MOODSSearch_dealloc,/*tp_dealloc*/
@@ -307,22 +308,21 @@ static PyTypeObject MOODSSearchType = {
     MOODSSearch_new,                /* tp_new */
 };
 
-static PyMethodDef moodsclass_mod_methods[] = {
+static PyMethodDef moody_mod_methods[] = {
     {NULL}
 };
 
-extern "C" {
-MOD_INIT(moodsclass) {
+MOD_INIT(moody) {
     if (PyType_Ready(&MOODSSearchType) < 0) {
         return NULL;
     }
     #if PY_MAJOR_VERSION >= 3
         static struct PyModuleDef moduledef = {
             PyModuleDef_HEAD_INIT,
-            "moodsclass",            /* m_name */
-            moodsclass__doc__,       /* m_doc */
+            "moody",                /* m_name */
+            moody__doc__,           /* m_doc */
             -1,                     /* m_size */
-            moodsclass_mod_methods,  /* m_methods */
+            moody_mod_methods,      /* m_methods */
             NULL,                   /* m_reload */
             NULL,                   /* m_traverse */
             NULL,                   /* m_clear */
@@ -336,11 +336,10 @@ MOD_INIT(moodsclass) {
         PyModule_AddObject(m, "MOODSSearch", (PyObject *)&MOODSSearchType);
         return m;
     #else
-        PyObject* m = Py_InitModule3("moodsclass", moodsclass_methods, moodsclass__doc__);
+        PyObject* m = Py_InitModule3("moody", moody_methods, moody__doc__);
         if (m == NULL) { return; }
         // import_array();
         Py_INCREF(&MOODSSearchType);
         PyModule_AddObject(m, "MOODSSearch", (PyObject *)&MOODSSearchType);
     #endif
 };
-}

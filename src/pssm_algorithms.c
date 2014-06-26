@@ -69,7 +69,7 @@ double * expectedDifferences(const score_matrix_t smatrix, const double *bg, int
         return ed;
 }
 
-void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
+int multipleMatrixLookaheadFiltrationDNASetup(const int q,  
     const score_matrix_vec_t matrices,
     OutputListElementMulti_t *output, 
     int *window_positions, int *m, int** orders,
@@ -294,10 +294,11 @@ void multipleMatrixLookaheadFiltrationDNASetup(const int q,
             break;
         }
     }
+    return 0;
 
     mlf_fail:
         // do stuff
-
+    return -1;
 }
 
 int doScan(const unsigned char *s, 
@@ -308,7 +309,7 @@ int doScan(const unsigned char *s,
     const bits_t size = 1 << (BITSHIFT * q); // numA^q
     const bits_t BITAND = size - 1;
     
-    const position_t n = s.size();
+    const position_t n = strlen(s);
 
     // unpack datastructure
     const int q = in->q;
@@ -388,7 +389,7 @@ int doScan(const unsigned char *s,
         code = (code << BITSHIFT) & BITAND; // dummy character to the end of code
 
         int lim;
-        if ((lim=kv_size(output[code]) != 0) {
+        if ( (lim = kv_size(output[code]) != 0) {
             OutputListElementMulti_t *y = output[code].a;
             OutputListElementMulti_t *yl = y + lim;
             for (; y < yl; ++y) {

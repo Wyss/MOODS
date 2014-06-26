@@ -84,7 +84,7 @@ struct {
 
 typedef kvec_t(OutputListElementMulti_t) OutputListElementMulti_vec_t;
 
-void multipleMatrixLookaheadFiltrationDNASetup(const int q,  
+int multipleMatrixLookaheadFiltrationDNASetup(const int q,  
     const score_matrix_vec_t *matrices,
     OutputListElementMulti **output, 
     int_vec_t *window_positions, int_vec_t *m, int_matrix_t *orders,
