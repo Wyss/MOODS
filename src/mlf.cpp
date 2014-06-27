@@ -1,5 +1,5 @@
 
-int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup() {
+int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
 
     const int BITSHIFT = 2;
     const unsigned int numA = 4; // 2**BITSIFT

@@ -142,14 +142,7 @@ typedef struct {
 
 static void
 MOODSSearch_dealloc(MOODSSearch* self) {
-    delete self->matrices;
-    delete self->output;
-    delete self->window_positions;
-    delete self->m;
-    delete self->orders;
-    delete self->L;
-    delete self->thresholds;
-    free(self->mlf);
+    delete self->mlf;
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -158,7 +151,7 @@ MOODSSearch_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     MOODSSearch *self;
     self = (MOODSSearch *)type->tp_alloc(type, 0);
     self->mlf = NULL;
-    self->mlf = (moods_mlf_t *) calloc(1, sizeof(moods_mlf_t));
+    self->mlf = new MOODS_MLF();
     /* allocate other fields later.
     */
     return (PyObject *)self;
@@ -176,7 +169,7 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     double ps = 0.1;
     int both_strands;
 
-    moods_mlf_t *mlf = self->mlf;
+    const MOODS_MLF *mlf_p = self->mlf;
 
     score_matrix_vec_t *matrices = self->matrices;
 
@@ -189,8 +182,7 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     }
 
     absolute_threshold = PyObject_IsTrue(py_absolute_threshold);
-    mlf->thresholds = atoDoubleArray(py_thresholds);
-    scoreArray &thresholds = *(self->thresholds);  // Hopefully this works
+    mlf_p->thresholds = atoDoubleArray(py_thresholds);
     
     self->both_strands = PyObject_IsTrue(py_both_strands);
 
@@ -207,8 +199,8 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     self->num_matrices = num_matrices;
 
     for(int i=0; i < num_matrices; i++) {
-        matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
-        if(matrices[i].size() != 4) {
+        mlf_p->matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
+        if(mlf_p->matrices[i].size() != 4) {
             PyErr_SetString(PyExc_RuntimeError, "Matrix size must be 4");
             return -1;
         }
@@ -221,36 +213,25 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
 
     if(both_strands) {
         for(int i=0; i < num_matrices; i++) {
-            matrices.push_back(reverseComplement(matrices[i]));
-            thresholds.push_back(thresholds[i]);
+            mlf_p->matrices.push_back(reverseComplement(mlf_p->matrices[i]));
+            mlp_p->thresholds.push_back(mlp_p->thresholds[i]);
         }
     }
     if(!absolute_threshold) {
         for(int i=0; i < matrices.size(); i++) {
-            matrices[i] = counts2LogOdds(matrices[i], bg, ps);
-            thresholds[i] = tresholdFromP(matrices[i], bg, thresholds[i]);
+            mlf_p->matrices[i] = counts2LogOdds(mlf_p->matrices[i], bg, ps);
+            mlp_p->thresholds[i] = tresholdFromP(mlp_p->matrices[i], bg, mlp_p->thresholds[i]);
         }
     }
 
     const int BITSHIFT = 2;
     const bits_t size = 1 << (BITSHIFT * q); // numA^q
-    self->output = new std::vector<std::vector< OutputListElementMulti> >;
-    self->output->reserve(size);
-    self->window_positions = new intArray;
-    self->window_positions->reserve(matrices.size());
-    self->m = new intArray(matrices.size(), 0);
-    self->orders = new intMatrix;
-    self->orders->reserve(matrices.size());
-    self->L = new scoreMatrix;
-    self->L->reserve(matrices.size());
-    if (multipleMatrixLookaheadFiltrationDNASetup(q, 
-        self->matrices, self->output, self->window_positions, 
-        self->m, self->orders, self->L,
-        bg, self->thresholds) < 0) {
+
+    if (self->mlf.multipleMatrixLookaheadFiltrationDNASetup() < 0) {
         return -1;
     };
 
-    self->q = q;
+    mlf->q = q;
 
     return 0;
 };
