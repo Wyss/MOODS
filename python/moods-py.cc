@@ -186,7 +186,7 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     
     self->both_strands = PyObject_IsTrue(py_both_strands);
 
-    scoreArray bg = *(atoDoubleArray(py_bg));
+    mlf_p->bg = atoDoubleArray(py_bg);
 
     if(!PyList_Check(py_matrices)) {
         return -1;
@@ -224,14 +224,13 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         }
     }
 
-    const int BITSHIFT = 2;
-    const bits_t size = 1 << (BITSHIFT * q); // numA^q
+    // const int BITSHIFT = 2;
+    // const bits_t size = 1 << (BITSHIFT * q); // numA^q
 
+    mlf_p->q = q;
     if (self->mlf.multipleMatrixLookaheadFiltrationDNASetup() < 0) {
         return -1;
     };
-
-    mlf->q = q;
 
     return 0;
 };
@@ -241,17 +240,21 @@ MOODSSearch_search(MOODSSearch* self, PyObject *args) {
     const char *sequence;
     std::vector<matchArray> matches;
     charArray c_seq;
+    int rc = 0;
+
     if (!PyArg_ParseTuple(args, "s", &sequence)) {
         return NULL;
     }
     c_seq = convertSequence(sequence);
-    matches = doScan(c_seq, self->q, self->matrices, self->output, 
-        self->window_positions, self->m, 
-        self->orders, self->L, self->thresholds);
+    matches = self->mlf.doScan(c_seq, &rc);
+    if (rc < 0) {
+        // cleanup or do goto
+        return NULL;
+    }
 
     int num_matrices = self->num_matrices;
     if(self->both_strands) {
-        if(matches.size() != 2 * num_matrices) {
+        if(matches.size() != (2 * num_matrices) ) {
             PyErr_SetString(PyExc_RuntimeError, "Unknown error");
             return NULL;
         }

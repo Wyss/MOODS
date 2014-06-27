@@ -8,8 +8,9 @@ module1 = Extension('MOODS._cmodule',
                     libraries=['pssm'])
 
 module2 = Extension('MOODS.moody',
-                    sources = ['moods-py.c', '../src/pssm_algorithms.c'],
-                    include_dirs=['../src', '../klib']
+                    sources = ['moods-py.cc', '../src/mlf.cpp'],
+                    include_dirs=['../src'],
+                    libraries=['pssm']
                     )
 
 setup (name = 'MOODS',

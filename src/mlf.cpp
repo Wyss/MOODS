@@ -176,7 +176,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     // return doScan(q, matrices, output, window_positions, m, orders, L, tol);
 }
 
-vector<matchArray> MOODS_MLF::doScan(const charArray &s) {
+vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
     const int BITSHIFT = 2;
     const bits_t size = 1 << (BITSHIFT * q); // numA^q
     const bits_t BITAND = size - 1;
@@ -255,5 +255,6 @@ vector<matchArray> MOODS_MLF::doScan(const charArray &s) {
         }
     }
 
+    *rc = 0
     return ret;
 }
