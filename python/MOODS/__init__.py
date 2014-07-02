@@ -1,4 +1,5 @@
 import MOODS._cmodule
+import MOODS.moody
 
 def load_matrix(filename):
     '''

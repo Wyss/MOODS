@@ -50,7 +50,8 @@ charArray convertSequence(const char *sequence) {
 
 PyObject *atoPyArray(scoreArray a) {
     PyObject *new_row = PyList_New(a.size());
-    for(int i=0; i < a.size(); i++) {
+    int il = a.size();
+    for(int i=0; i < il; i++) {
         PyList_SET_ITEM(new_row, i, PyFloat_FromDouble(a[i]));
     }
     return new_row;
@@ -58,7 +59,8 @@ PyObject *atoPyArray(scoreArray a) {
 
 PyObject *atoPyMatrix(scoreMatrix m) {
     PyObject *py_matrix = PyList_New(m.size());
-    for(int i = 0; i < m.size(); i++) {
+    int il=m.size();
+    for(int i = 0; i < il; i++) {
         PyList_SET_ITEM(py_matrix, i, atoPyArray(m[i]));
     }
     return py_matrix;
@@ -71,7 +73,7 @@ scoreArray atoDoubleArray(PyObject *o) {
     }
     Py_ssize_t length = PyList_Size(o);
     PyObject *tmp;
-    for(int i=0; i< length; i++) {
+    for(int i=0; i < length; i++) {
         tmp = PyList_GET_ITEM(o, i);
         t.push_back(PyFloat_AsDouble(tmp));
     }
@@ -85,52 +87,11 @@ scoreMatrix atoDoubleMatrix(PyObject *o) {
     }
     Py_ssize_t length = PyList_Size(o);
     PyObject *tmp;
-    for(int i=0; i< length; i++) {
+    for(int i=0; i < length; i++) {
         tmp = PyList_GET_ITEM(o, i);
         t.push_back(atoDoubleArray(tmp));
     }
     return t;
-}
-
-static PyObject *_countLogOdds(PyObject *self, PyObject *args)
-{
-    PyObject *py_matrix;
-    PyObject *py_bg;
-    double ps;
-
-    if (!PyArg_ParseTuple(args, "OOd", &py_matrix, &py_bg, &ps))
-        return NULL;
-
-    scoreMatrix m = atoDoubleMatrix(py_matrix);
-    scoreArray bg = atoDoubleArray(py_bg);
-    if(PyErr_Occurred()) {
-        return NULL;
-    }
-    return atoPyMatrix(counts2LogOdds(m, bg, ps));
-}
-
-static PyObject *_thresholdFromP(PyObject *self, PyObject *args) {
-    PyObject *py_matrix;
-    PyObject *py_bg;
-    double p;
-
-    if (!PyArg_ParseTuple(args, "OOd", &py_matrix, &py_bg, &p))
-        return NULL;
-
-    scoreMatrix m = atoDoubleMatrix(py_matrix);
-    scoreArray bg = atoDoubleArray(py_bg);
-    if(PyErr_Occurred()) {
-        return NULL;
-    }
-    return PyFloat_FromDouble(tresholdFromP(m, bg, p));
-}
-static PyObject *_bgFromSequence(PyObject *self, PyObject *args) {
-    const char *seq;
-    double ps;
-
-    if (!PyArg_ParseTuple(args, "sd", &seq, &ps))
-        return NULL;
-    return atoPyArray(bgFromSequence(convertSequence(seq), 4, ps));
 }
 
 typedef struct {
@@ -151,7 +112,6 @@ MOODSSearch_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     MOODSSearch *self;
     self = (MOODSSearch *)type->tp_alloc(type, 0);
     self->mlf = NULL;
-    self->mlf = new MOODS_MLF();
     /* allocate other fields later.
     */
     return (PyObject *)self;
@@ -169,10 +129,6 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     double ps = 0.1;
     int both_strands;
 
-    const MOODS_MLF *mlf_p = self->mlf;
-
-    score_matrix_vec_t *matrices = self->matrices;
-
     if (self == NULL) {
         return -1;
     }
@@ -181,24 +137,27 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
+    self->mlf = new MOODS_MLF(q);
+    MOODS_MLF *mlf_p = self->mlf;
+
     absolute_threshold = PyObject_IsTrue(py_absolute_threshold);
     mlf_p->thresholds = atoDoubleArray(py_thresholds);
     
-    self->both_strands = PyObject_IsTrue(py_both_strands);
+    self->both_strands = both_strands = PyObject_IsTrue(py_both_strands);
 
     mlf_p->bg = atoDoubleArray(py_bg);
 
     if(!PyList_Check(py_matrices)) {
         return -1;
     }
-    int num_matrices = (int) PyList_Size(py_matrices);
-    if(num_matrices != thresholds.size()) {
+    unsigned int num_matrices =  PyList_Size(py_matrices);
+    if(num_matrices != mlf_p->thresholds.size()) {
         PyErr_SetString(PyExc_RuntimeError, "Thresholds should be as many as matrices");
         return -1;
     }
     self->num_matrices = num_matrices;
 
-    for(int i=0; i < num_matrices; i++) {
+    for(unsigned int i=0; i < num_matrices; i++) {
         mlf_p->matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
         if(mlf_p->matrices[i].size() != 4) {
             PyErr_SetString(PyExc_RuntimeError, "Matrix size must be 4");
@@ -212,23 +171,20 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     }
 
     if(both_strands) {
-        for(int i=0; i < num_matrices; i++) {
+        for(unsigned int i=0; i < num_matrices; i++) {
             mlf_p->matrices.push_back(reverseComplement(mlf_p->matrices[i]));
-            mlp_p->thresholds.push_back(mlp_p->thresholds[i]);
+            mlf_p->thresholds.push_back(mlf_p->thresholds[i]);
         }
     }
     if(!absolute_threshold) {
-        for(int i=0; i < matrices.size(); i++) {
-            mlf_p->matrices[i] = counts2LogOdds(mlf_p->matrices[i], bg, ps);
-            mlp_p->thresholds[i] = tresholdFromP(mlp_p->matrices[i], bg, mlp_p->thresholds[i]);
+        int il = mlf_p->matrices.size();
+        for(int i=0; i < il; i++) {
+            mlf_p->matrices[i] = counts2LogOdds(mlf_p->matrices[i], mlf_p->bg, ps);
+            mlf_p->thresholds[i] = tresholdFromP(mlf_p->matrices[i], mlf_p->bg, mlf_p->thresholds[i]);
         }
     }
 
-    // const int BITSHIFT = 2;
-    // const bits_t size = 1 << (BITSHIFT * q); // numA^q
-
-    mlf_p->q = q;
-    if (self->mlf.multipleMatrixLookaheadFiltrationDNASetup() < 0) {
+    if (mlf_p->multipleMatrixLookaheadFiltrationDNASetup() < 0) {
         return -1;
     };
 
@@ -246,19 +202,19 @@ MOODSSearch_search(MOODSSearch* self, PyObject *args) {
         return NULL;
     }
     c_seq = convertSequence(sequence);
-    matches = self->mlf.doScan(c_seq, &rc);
+    matches = self->mlf->doScan(c_seq, &rc);
     if (rc < 0) {
         // cleanup or do goto
         return NULL;
     }
 
-    int num_matrices = self->num_matrices;
+    unsigned int num_matrices = self->num_matrices;
     if(self->both_strands) {
         if(matches.size() != (2 * num_matrices) ) {
             PyErr_SetString(PyExc_RuntimeError, "Unknown error");
             return NULL;
         }
-        for(int i=0; i< num_matrices; i++) {
+        for(unsigned int i=0; i < num_matrices; i++) {
             while(!matches[num_matrices + i].empty()) {
                 matches[num_matrices + i].back().position = -matches[num_matrices + i].back().position;
                 matches[i].push_back(matches[num_matrices + i].back());
@@ -267,9 +223,9 @@ MOODSSearch_search(MOODSSearch* self, PyObject *args) {
         }
     }
     PyObject *results = PyList_New(matches.size());
-    for(int i = 0; i < matches.size(); i++) {
+    for(unsigned int i = 0; i < matches.size(); i++) {
         PyObject *new_match_list = PyList_New(matches[i].size());
-        for(int j=0; j < matches[i].size(); j++) {
+        for(unsigned int j=0; j < matches[i].size(); j++) {
             PyList_SET_ITEM(new_match_list, j, Py_BuildValue("Ld", matches[i][j].position, matches[i][j].score));
         }
         PyList_SET_ITEM(results, i, new_match_list);

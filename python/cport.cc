@@ -48,7 +48,7 @@ charArray convertSequence(const char *sequence) {
 
 PyObject *atoPyArray(scoreArray a) {
 	PyObject *new_row = PyList_New(a.size());
-	for(int i=0; i < a.size(); i++) {
+	for(unsigned int i=0; i < a.size(); i++) {
 		PyList_SET_ITEM(new_row, i, PyFloat_FromDouble(a[i]));
 	}
 	return new_row;
@@ -56,7 +56,7 @@ PyObject *atoPyArray(scoreArray a) {
 
 PyObject *atoPyMatrix(scoreMatrix m) {
 	PyObject *py_matrix = PyList_New(m.size());
-	for(int i = 0; i < m.size(); i++) {
+	for(unsigned int i = 0; i < m.size(); i++) {
 		PyList_SET_ITEM(py_matrix, i, atoPyArray(m[i]));
 	}
 	return py_matrix;
@@ -175,13 +175,13 @@ static PyObject *_search(PyObject *self, PyObject *args)
     if(!PyList_Check(py_matrices)) {
 		return NULL;
 	}
-	int num_matrices = (int) PyList_Size(py_matrices);
+	unsigned int num_matrices = (int) PyList_Size(py_matrices);
 	if(num_matrices != thresholds.size()) {
 		PyErr_SetString(PyExc_RuntimeError, "Thresholds should be as many as matrices");
 		return NULL;
 	}
 
-	for(int i=0; i< num_matrices; i++) {
+	for(unsigned int i=0; i< num_matrices; i++) {
 		matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
 		if(matrices[i].size() != 4) {
 			PyErr_SetString(PyExc_RuntimeError, "Matrix size must be 4");
@@ -195,13 +195,13 @@ static PyObject *_search(PyObject *self, PyObject *args)
 	}
 
 	if(both_strands) {
-		for(int i=0; i < num_matrices; i++) {
+		for(unsigned int i=0; i < num_matrices; i++) {
 			matrices.push_back(reverseComplement(matrices[i]));
 			thresholds.push_back(thresholds[i]);
 		}
 	}
 	if(!absolute_threshold) {
-		for(int i=0; i< matrices.size(); i++) {
+		for(unsigned int i=0; i < matrices.size(); i++) {
 			matrices[i] = counts2LogOdds(matrices[i], bg, ps);
 			thresholds[i] = tresholdFromP(matrices[i], bg, thresholds[i]);
 		}
@@ -214,7 +214,7 @@ static PyObject *_search(PyObject *self, PyObject *args)
 		matches = multipleMatrixLookaheadFiltrationDNA(q, c_seq, matrices, bg, thresholds);
 	}
 	else {
-		for(int i = 0; i < matrices.size(); i++) {
+		for(unsigned int i = 0; i < matrices.size(); i++) {
 			matchArray result;
 			if(maxScore(matrices[i]) >= thresholds[i]) {
 				if(strcmp(algorithm, "naive") == 0) {
@@ -223,7 +223,7 @@ static PyObject *_search(PyObject *self, PyObject *args)
 				else if(strcmp(algorithm, "pla") == 0) {
 					result = permutatedLookAhead(c_seq, matrices[i], bg, thresholds[i]);
 				}
-				else if(strcmp(algorithm, "supera") == 0 ||  matrices[0].size() > (3*q)) {
+				else if(strcmp(algorithm, "supera") == 0 ||  ( ((int) matrices[0].size()) > (3*q)) ) {
 					result = naiveSuperalphabetAlgorithmDNA(q, c_seq, matrices[i], thresholds[i]);
 				}
 				else if(strcmp(algorithm, "lf") == 0) {
@@ -239,11 +239,11 @@ static PyObject *_search(PyObject *self, PyObject *args)
 		}
 	}
 	if(both_strands) {
-		if(matches.size() != 2 * num_matrices) {
+		if(matches.size() != (2 * num_matrices) ) {
 			PyErr_SetString(PyExc_RuntimeError, "Unknown error");
 			return NULL;
 		}
-		for(int i=0; i< num_matrices; i++) {
+		for(unsigned int i=0; i < num_matrices; i++) {
 			while(!matches[num_matrices + i].empty()) {
 				matches[num_matrices + i].back().position = -matches[num_matrices + i].back().position;
 				matches[i].push_back(matches[num_matrices + i].back());
@@ -252,9 +252,9 @@ static PyObject *_search(PyObject *self, PyObject *args)
 		}
 	}
 	PyObject *results = PyList_New(matches.size());
-	for(int i = 0; i < matches.size(); i++) {
+	for(unsigned int i = 0; i < matches.size(); i++) {
 		PyObject *new_match_list = PyList_New(matches[i].size());
-		for(int j=0; j < matches[i].size(); j++) {
+		for(unsigned int j=0; j < matches[i].size(); j++) {
 			PyList_SET_ITEM(new_match_list, j, Py_BuildValue("Ld", matches[i][j].position, matches[i][j].score));
 		}
 		PyList_SET_ITEM(results, i, new_match_list);
@@ -293,6 +293,7 @@ MOD_INIT(_cmodule) {
 	        NULL,               /* m_free */
 	    };
 	    PyObject* m = PyModule_Create(&moduledef);
+	    if (m == NULL) { return NULL; }
 	    return m;
 	#else
 		(void) Py_InitModule3("_cmodule", _cmodule__methods, _cmodule__doc__);

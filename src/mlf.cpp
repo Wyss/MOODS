@@ -1,8 +1,20 @@
 
-int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
+#include <limits.h>
+#include <algorithm>
+#include <vector>
+#include "mlf.hpp"
 
-    const int BITSHIFT = 2;
-    const unsigned int numA = 4; // 2**BITSIFT
+// Struct for comparing matrix rows with sort()
+struct compareRows
+{
+    const doubleArray *goodness;
+    bool operator() (int i, int j)
+    {
+        return ( (*goodness)[i] > (*goodness)[j] );
+    }
+};
+
+int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
 
     m.resize(matrices.size(), 0);
     for (int i = 0; i < (int) matrices.size(); ++i) {
@@ -10,7 +22,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     }
 
     // Calculate entropies for all matrices
-    vector<doubleArray> goodnesses;
+    std::vector<doubleArray> goodnesses;
     goodnesses.reserve(matrices.size());
 
     for (int i = 0; i < (int)matrices.size(); ++i) {
@@ -98,7 +110,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
             compareRows comp;
             comp.goodness = &(goodnesses[k]);
 
-            sort(order.begin(), order.end(), comp);
+            std::sort(order.begin(), order.end(), comp);
 
             orders.push_back(order);
 
@@ -134,7 +146,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
                     for (int i = 0; i < m[k]; ++i) {
                         score += matrices[k][sA[i]][i];
                     }
-                    if (score >= tol[k]) {
+                    if (score >= thresholds[k]) {
                         OutputListElementMulti temp;
                         temp.full = true;
                         temp.matrix = k;
@@ -146,7 +158,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
                     for (int i = 0; i < q; ++i) {
                         score += matrices[k][sA[i]][i + window_positions[k]];
                     }
-                    if (score + P[k] + T[k][q + window_positions[k]-1] >= tol[k]) {
+                    if (score + P[k] + T[k][q + window_positions[k]-1] >= thresholds[k]) {
                         OutputListElementMulti temp;
                         temp.full = false;
                         temp.matrix = k;
@@ -173,18 +185,14 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
         }
     }
 
-    // return doScan(q, matrices, output, window_positions, m, orders, L, tol);
+    return 0;
 }
 
-vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
-    const int BITSHIFT = 2;
-    const bits_t size = 1 << (BITSHIFT * q); // numA^q
-    const bits_t BITAND = size - 1;
-    
+std::vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
     const position_t n = s.size();
     // Scanning
 
-    vector<matchArray> ret;
+    std::vector<matchArray> ret;
     for (unsigned int i = 0; i < matrices.size(); ++i) {
         matchArray temp;
         ret.push_back(temp);
@@ -208,7 +216,7 @@ vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
         code = ((code << BITSHIFT) + s[i + q - 1]) & BITAND;
 
         if (!output[code].empty()) {
-            for (vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
+            for (std::vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
                 if (y->full) { // A Hit for a matrix of length <= q
                     hit.position = i;
                     hit.score = y->score;
@@ -221,7 +229,7 @@ vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
                     k = y->matrix;
                     limit = m[k] - q;
                     ii = i - window_positions[k];
-                    tolerance = tol[k];
+                    tolerance = thresholds[k];
                     z = orders[k].begin();
                     for (int j = 0; j < limit  ;++j) {
                         score += matrices[k][s[ii+(*z)]][*z];
@@ -245,7 +253,7 @@ vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
 
         if (!output[code].empty()) {
 
-            for (vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
+            for (std::vector<OutputListElementMulti>::iterator y = output[code].begin(); y != output[code].end(); ++y) {
                 if (y->full && m[y->matrix] < n - i + 1) { // only sufficiently short hits are considered
                     hit.position = i;
                     hit.score = y->score;
@@ -255,6 +263,6 @@ vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
         }
     }
 
-    *rc = 0
+    *rc = 0;
     return ret;
 }

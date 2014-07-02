@@ -15,24 +15,31 @@
 struct MOODS_MLF {
     int q; 
     std::vector<scoreMatrix> matrices;
-    std::vector<std::vector< OutputListElementMulti> > output; 
     intArray window_positions;
     intArray m; 
     intMatrix orders; 
     scoreMatrix L;
     scoreArray thresholds;
     scoreArray bg;
+    
+    static const int BITSHIFT = 2;
+    static const unsigned int numA = 4; // 2**BITSIFT
+
+    bits_t size; // numA^q
+    std::vector<std::vector< OutputListElementMulti> > output; 
+    bits_t BITAND;
 
     // matrices could be required by the constructor, or I can assign it 
     // and look it up later.
-    MOODS_MLF() {
+    MOODS_MLF(int q_in) : q(q_in),  size(1 << (BITSHIFT * q)), output(size), BITAND(size -1) {
     }
 
     // must assign member matrices before calling the below methods
     int multipleMatrixLookaheadFiltrationDNASetup();
-    vector<matchArray> doScan(MOODS_MLF &in, int *rc);
+    std::vector<matchArray> doScan(const charArray &s, int *rc);
 };
 
+// for C ease of use
 typedef struct MOODS_MLF MOODS_MLF;
 
 #endif
