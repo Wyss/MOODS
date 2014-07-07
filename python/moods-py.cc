@@ -2,7 +2,8 @@
 #include "structmember.h"
 #include "string.h"             /* for NULL pointers */
 #include "mlf.hpp"
-#
+#include <new>
+
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #include    <numpy/arrayobject.h>
 
@@ -137,7 +138,12 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
-    self->mlf = new MOODS_MLF(q);
+    // checkout nothrow here
+    // http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=170
+    self->mlf = new(std::nothrow) MOODS_MLF(q);
+    if (!self->mlf) {
+        return -1;
+    }
     MOODS_MLF *mlf_p = self->mlf;
 
     absolute_threshold = PyObject_IsTrue(py_absolute_threshold);
