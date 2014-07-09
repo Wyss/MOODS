@@ -303,7 +303,11 @@ static PyMethodDef moody_mod_methods[] = {
 extern "C" {
 MOD_INIT(moody) {
     if (PyType_Ready(&MOODSSearchType) < 0) {
-        return NULL;
+        #if PY_MAJOR_VERSION >= 3
+            return NULL;
+        #else
+            return;
+        #endif
     }
     #if PY_MAJOR_VERSION >= 3
         static struct PyModuleDef moduledef = {
