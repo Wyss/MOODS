@@ -325,7 +325,7 @@ MOD_INIT(moody) {
         PyModule_AddObject(m, "MOODSSearch", (PyObject *)&MOODSSearchType);
         return m;
     #else
-        PyObject* m = Py_InitModule3("moody", moody_methods, moody__doc__);
+        PyObject* m = Py_InitModule3("moody", moody_mod_methods, moody__doc__);
         if (m == NULL) { return; }
         // import_array();
         Py_INCREF(&MOODSSearchType);
