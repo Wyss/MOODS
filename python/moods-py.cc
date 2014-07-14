@@ -126,9 +126,9 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
     PyObject *py_absolute_threshold;
     PyObject *py_bg;
     PyObject *py_both_strands;
-    int absolute_threshold;
+    int absolute_threshold=0;
     double ps = 0.1;
-    int both_strands;
+    int both_strands=0;
 
     if (self == NULL) {
         return -1;
