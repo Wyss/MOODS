@@ -2252,7 +2252,7 @@ vector<matchArray> multipleMatrixLookaheadFiltrationDNA(const int q, const charA
     scoreMatrix L;
     L.reserve(matrices.size());
 
-    for (unsigned short k = 0; k < (int) matrices.size(); ++k)
+    for (unsigned short k = 0; k < matrices.size(); ++k)
     {
         if (q >= m[k])
         {
@@ -2300,7 +2300,7 @@ vector<matchArray> multipleMatrixLookaheadFiltrationDNA(const int q, const charA
 
 
     vector<vector< OutputListElementMulti> > output(size);
-
+    printf("orig The size: %d\n",  size);
 	{
 		bitArray sA(q,0);
 		while (true)

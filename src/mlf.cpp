@@ -17,7 +17,7 @@ struct compareRows
 int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
 
     m.resize(matrices.size(), 0);
-    for (int i = 0; i < (int) matrices.size(); ++i) {
+    for (unsigned int i = 0; i < matrices.size(); ++i) {
         m[i] = matrices[i][0].size();
     }
 
@@ -25,12 +25,12 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     std::vector<doubleArray> goodnesses;
     goodnesses.reserve(matrices.size());
 
-    for (int i = 0; i < (int)matrices.size(); ++i) {
+    for (unsigned int i = 0; i < matrices.size(); ++i) {
         goodnesses.push_back(expectedDifferences(matrices[i], bg));
     }
 
     window_positions.reserve(matrices.size());
-    for (int k = 0; k < (int)matrices.size(); ++k) {
+    for (unsigned int k = 0; k < matrices.size(); ++k) {
         if (q >= m[k]) {
             window_positions.push_back(0);
         } else {
@@ -58,7 +58,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     scoreMatrix T;
     T.reserve(matrices.size());
 
-    for (int k = 0; k < (int)matrices.size(); ++k) {
+    for (unsigned int k = 0; k < matrices.size(); ++k) {
         scoreArray C(m[k],0);
         for (int j = m[k] - 1; j > 0; --j) {
             score_t max = SCORE_MIN;
@@ -74,7 +74,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     // Pre-window scores
     scoreArray P;
     P.reserve(matrices.size());
-    for (int k = 0; k < (int)matrices.size(); ++k) {
+    for (unsigned int k = 0; k < matrices.size(); ++k) {
         score_t B = 0;
         for (int j = 0; j < window_positions[k]; ++j) {
             score_t max = SCORE_MIN;
@@ -91,7 +91,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     orders.reserve(matrices.size());
     L.reserve(matrices.size());
 
-    for (unsigned short k = 0; k < (int) matrices.size(); ++k) {
+    for (unsigned short k = 0; k < matrices.size(); ++k) {
         if (q >= m[k]) {
             intArray temp1;
             orders.push_back(temp1);
@@ -133,7 +133,7 @@ int MOODS_MLF::multipleMatrixLookaheadFiltrationDNASetup(void) {
     // vector<vector< OutputListElementMulti> > output(size);
 
     {
-        bitArray sA(q,0);
+        bitArray sA(q, 0);
         while (true) {
             bits_t code = 0;
             for (int j = 0; j < q; ++j) {
