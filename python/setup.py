@@ -1,8 +1,8 @@
 """
 When installing on OS X, you must build python with the same compiler 
 as you build libpssm.a with, so basically, use the system python or 
-build from scratch from source or with from source with Homebrew
-otherwise you may get unknow symbol errors
+build python from scratch from source or with from source with Homebrew
+otherwise you may get unknown symbol errors
 """
 from distutils.core import setup, Extension
 from os.path import abspath, dirname, join
@@ -24,7 +24,6 @@ module2 = Extension('MOODS.moody',
                     libraries=['pssm']
                     )
 
-from distutils import sysconfig
 import sys
 import platform
 if sys.platform == 'darwin' and 'clang' in platform.python_compiler().lower():

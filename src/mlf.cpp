@@ -239,6 +239,7 @@ std::vector<matchArray> MOODS_MLF::doScan(const charArray &s, int *rc) {
                         ++z;
                     }
                     if (score >= tolerance) {
+                        // printf("score: %f, tol: %f\n", score, tolerance);
                         hit.position = i - window_positions[k];
                         hit.score = score;
                         ret[k].push_back(hit);

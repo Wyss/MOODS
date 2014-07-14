@@ -44,3 +44,5 @@ results = ms.search(seq)
 
 print("New Matrix 1 results: "+ str(len(results[0])))
 print("New Matrix 2 results: "+ str(len(results[1])))
+
+ms2 = MOODS.MOODSSearch(matrices, thresholds, bg, q, absolute_threshold, both_strands)

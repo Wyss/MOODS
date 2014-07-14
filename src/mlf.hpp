@@ -32,7 +32,8 @@ struct MOODS_MLF {
     // matrices could be required by the constructor, or I can assign it 
     // and look it up later.
     MOODS_MLF(int q_in) : q(q_in),  size(1 << (BITSHIFT * q)), output(size), BITAND(size - 1) {
-        printf("new The size: %d\n",  size);
+        // printf("new The size: %d\n",  size);
+        // printf("matrices size: %lu\n", matrices.size());
     }
 
     // must assign member matrices before calling the below methods

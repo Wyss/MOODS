@@ -162,7 +162,7 @@ MOODSSearch_init(MOODSSearch *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
     self->num_matrices = num_matrices;
-
+    // printf("num_matrices: %d\n", num_matrices);
     for(unsigned int i=0; i < num_matrices; i++) {
         mlf_p->matrices.push_back(atoDoubleMatrix(PyList_GET_ITEM(py_matrices, i)));
         if(mlf_p->matrices[i].size() != 4) {
