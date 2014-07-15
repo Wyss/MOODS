@@ -230,7 +230,7 @@ class TestMOODS_Standalone(TestCase):
 
     def test_hit_length(self):
         # print(len(self.raw_hits), len(self.motif_matrices))
-        assert len(self.raw_hits) == 2*len(self.motif_matrices)
+        assert len(self.raw_hits) == len(self.motif_matrices)
 
     def test_hit_thresholds(self):
         # print(self.raw_hits[19])

@@ -215,12 +215,14 @@ MOODSSearch_search(MOODSSearch* self, PyObject *args) {
     }
 
     unsigned int num_matrices = self->num_matrices;
+    // printf("matches size before: %lu %d\n", matches.size(), self->both_strands);
     if(self->both_strands) {
+        // consolidate matches
         if(matches.size() != (2 * num_matrices) ) {
             PyErr_SetString(PyExc_RuntimeError, "Unknown error");
             return NULL;
         }
-        for(unsigned int i=0; i < num_matrices; i++) {
+        for(unsigned int i=0; i < num_matrices; ++i) {
             while(!matches[num_matrices + i].empty()) {
                 matches[num_matrices + i].back().position = -matches[num_matrices + i].back().position;
                 matches[i].push_back(matches[num_matrices + i].back());
@@ -228,10 +230,11 @@ MOODSSearch_search(MOODSSearch* self, PyObject *args) {
             }
         }
     }
-    PyObject *results = PyList_New(matches.size());
-    for(unsigned int i = 0; i < matches.size(); i++) {
+    // printf("matches size after: %lu\n", matches.size());
+    PyObject *results = PyList_New(num_matrices);
+    for(unsigned int i = 0; i < num_matrices; ++i) {
         PyObject *new_match_list = PyList_New(matches[i].size());
-        for(unsigned int j=0; j < matches[i].size(); j++) {
+        for(unsigned int j=0; j < matches[i].size(); ++j) {
             PyList_SET_ITEM(new_match_list, j, Py_BuildValue("Ld", matches[i][j].position, matches[i][j].score));
         }
         PyList_SET_ITEM(results, i, new_match_list);
