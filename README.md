@@ -10,7 +10,7 @@ MOODS is a suite of algorithms for matching position weight matrices (PWM) again
 
 MOODS has been designed to be used as a library wherever PWM matching is needed. It can be used as standalone analysis tool or as a component in larger programs. It contains interfaces for BioPerl and Biopython toolkits. MOODS can thus be easily called from C++, Python and Perl programs.
 
-MOODS is licenced under GPL version 3 license and under the Biopython license, so you may use it under terms of either of those licenses. See COPYING.GPLv3 and COPYING.BIOPYTHON files for license details.
+MOODS is licenced under GPL version 3 license and under the Biopython license, so you may use it under terms of either of those licenses. See `COPYING.GPLv3` and `COPYING.BIOPYTHON` files for license details.
 
 The project web page is at http://www.cs.helsinki.fi/group/pssmfind. Please refer there for further information and documentation.
 
@@ -22,12 +22,12 @@ and is GPL version 3 license
 
 MOODS has been written by Pasi Rastas, Janne Korhonen and Petri Martinmäki. The project is currently maintained by Janne Korhonen (jazkorho@cs.helsinki.fi).
 
-for questions regarding the MOODS.moody.MOODSSearch and moods-py.cc please use issues on github
+for questions regarding the `MOODS.MOODSSearch` and `moods-py.cc` please use issues on github
 
 ## INSTALLATION
 
 You need to compile the C++ library before installing the Perl and Python interfaces. This can be done by running "make" in the "src" directory.
 
 Installing extensions:
-- For perl extension see perl/README.
-- For python extension see python/README.md
+- For perl extension see `perl/README`.
+- For python extension see `python/README.md`
