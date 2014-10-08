@@ -1,7 +1,8 @@
 This is a fork of MOODS version 1.0.1 it adds an additionaly python object
 `MOODSSearch` that lets you run many search with minimal parameter 
 reloading overhead so that you don't need to concatenate searches 
-and then parse the results to get speed ups with `MOODS.search`
+and then parse the results to get speed ups with `MOODS.search`.
+Additionally it adds support for Python 3
 
 # MOODS version 1.0.1
 =======================
