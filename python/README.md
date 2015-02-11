@@ -23,7 +23,7 @@ Copyright (C) 2014  Nick Conway Wyss Institute for Biologically Inspired Enginee
 and is also under the GPL version 3 license 
 
 ## USAGE
-`MOODSSearch` lets you run many search with minimal parameter 
+`MOODSSearch` lets you run many searches with minimal parameter 
 reloading overhead so that you don't need to concatenate searches 
 and then parse the results to get speed ups with `MOODS.search`
 
